@@ -1,4 +1,4 @@
-name: ATW-Donat-TP
+name: ATW-Donate-TP
 version: 1.0.1
 main: ru.praydein.atwdonat.AtwDonatTp
 author: PrayDein
@@ -20,11 +20,11 @@ commands:
     usage: /htp <ник>
 permissions:
   atwdon.tp:
-    default: false
+    default: op
   atwdon.tpblock:
-    default: false
+    default: op
   atwdon.tpallow:
-    default: false
+    default: op
   atwdon.admin.tpdonblock:
     default: op
   atwdon.admin.htp:
