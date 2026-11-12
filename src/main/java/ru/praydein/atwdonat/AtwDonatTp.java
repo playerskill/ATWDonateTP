@@ -278,24 +278,37 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
             message(player, "no-permission");
             return;
         }
+        UUID owner = player.getUniqueId();
+
+        // Разрешающая команда без аргументов — только синтаксис.
+        // Специальный аргумент "-all" — разрешить всем.
+        if (!deny && args.length == 1 && args[0].equalsIgnoreCase("-all")) {
+            if (!updateRules(player, owner, null, false)) return;
+            blockAll.remove(owner);
+            blocked.remove(owner);
+            exceptions.remove(owner);
+            message(player, "allowed-all");
+            return;
+        }
+        if (!deny && args.length == 0) {
+            message(player, "allow-usage");
+            return;
+        }
+
         if (args.length > 1) {
             message(player, deny ? "block-usage" : "allow-usage");
             return;
         }
-        UUID owner = player.getUniqueId();
+
         if (args.length == 0) {
+            // Сюда попадает только /tpblock без ника — блок всех.
             if (!updateRules(player, owner, null, deny)) return;
-            if (deny) {
-                blockAll.add(owner);
-                exceptions.remove(owner);
-            } else {
-                blockAll.remove(owner);
-                blocked.remove(owner);
-                exceptions.remove(owner);
-            }
-            message(player, deny ? "blocked-all" : "allowed-all");
+            blockAll.add(owner);
+            exceptions.remove(owner);
+            message(player, "blocked-all");
             return;
         }
+
         OfflinePlayer target = Bukkit.getPlayerExact(args[0]);
         if (target == null) {
             for (OfflinePlayer known : Bukkit.getOfflinePlayers()) {
