@@ -1,7 +1,7 @@
 name: ATW-Donate-TP
-version: 1.0.1
+version: 1.0.2
 main: ru.praydein.atwdonat.AtwDonatTp
-author: PrayDein
+author: PrayDein 95% feat. PlayeR_SkiLL 5%
 commands:
   tp:
     description: Телепортация к игроку
