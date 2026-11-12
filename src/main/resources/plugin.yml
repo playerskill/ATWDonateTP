@@ -1,0 +1,33 @@
+name: ATW-Donat-TP
+version: 1.0.1
+main: ru.praydein.atwdonat.AtwDonatTp
+author: PrayDein
+commands:
+  tp:
+    description: Телепортация к игроку
+    usage: /tp <ник>
+  tpblock:
+    description: Запретить телепортацию к себе
+    usage: /tpblock [ник]
+  tptrue:
+    description: Разрешить телепортацию к себе
+    usage: /tptrue [ник]
+  tpdonblock:
+    description: Переключить общий запрет телепортации
+    usage: /tpdonblock
+  htp:
+    description: Телепортация администратора
+    usage: /htp <ник>
+permissions:
+  atwdon.tp:
+    default: false
+  atwdon.tpblock:
+    default: false
+  atwdon.tpallow:
+    default: false
+  atwdon.admin.tpdonblock:
+    default: op
+  atwdon.admin.htp:
+    default: op
+  atwdon.admin.blockworld:
+    default: op

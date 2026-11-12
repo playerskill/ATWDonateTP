@@ -1,0 +1,32 @@
+cooldown-seconds: 30
+blocked-source-worlds:
+  - duels
+  - plsk
+blocked-destination-worlds:
+  - duels
+  - plsk
+messages:
+  prefix: '&8[&bATW-TP&8] &r'
+  players-only: '&cЭта команда доступна только игрокам.'
+  no-permission: '&cУ вас нет прав на эту команду.'
+  tp-usage: '&cИспользование: /tp <ник>'
+  htp-usage: '&cИспользование: /htp <ник>'
+  block-usage: '&cИспользование: /tpblock [ник]'
+  allow-usage: '&cИспользование: /tptrue [ник]'
+  admin-usage: '&cИспользование: /tpdonblock'
+  player-not-found: '&cИгрок не найден или не находится на сервере.'
+  self-target: '&cНельзя указать самого себя.'
+  teleport-disabled: '&cОбычные телепортации временно отключены администратором.'
+  target-blocked: '&cЭтот игрок запретил вам телепортироваться к нему.'
+  source-world-blocked: '&cВ этом мире нельзя использовать телепортацию.'
+  destination-world-blocked: '&cВ мир игрока нельзя телепортироваться.'
+  cooldown: '&cПодождите ещё {seconds} сек. перед телепортацией.'
+  teleport-success: '&aВы телепортировались к игроку {player}.'
+  teleport-failed: '&cТелепортация не удалась.'
+  storage-error: '&cНе удалось сохранить настройки телепортации. Обратитесь к администратору.'
+  blocked-player: '&aИгроку {player} запрещено телепортироваться к вам.'
+  blocked-all: '&aВсе игроки заблокированы для телепортации к вам.'
+  allowed-player: '&aИгроку {player} разрешено телепортироваться к вам.'
+  allowed-all: '&aОбщий запрет и список заблокированных игроков отключены.'
+  admin-disabled: '&cОбычные телепортации отключены.'
+  admin-enabled: '&aОбычные телепортации включены.'
