@@ -280,32 +280,30 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
         }
         UUID owner = player.getUniqueId();
 
-        // Разрешающая команда без аргументов — только синтаксис.
-        // Специальный аргумент "-all" — разрешить всем.
-        if (!deny && args.length == 1 && args[0].equalsIgnoreCase("-all")) {
-            if (!updateRules(player, owner, null, false)) return;
-            blockAll.remove(owner);
-            blocked.remove(owner);
-            exceptions.remove(owner);
-            message(player, "allowed-all");
-            return;
-        }
-        if (!deny && args.length == 0) {
-            message(player, "allow-usage");
+        // Специальный аргумент "-all" — применить ко всем.
+        if (args.length == 1 && args[0].equalsIgnoreCase("-all")) {
+            if (!updateRules(player, owner, null, deny)) return;
+            if (deny) {
+                blockAll.add(owner);
+                exceptions.remove(owner);
+                message(player, "blocked-all");
+            } else {
+                blockAll.remove(owner);
+                blocked.remove(owner);
+                exceptions.remove(owner);
+                message(player, "allowed-all");
+            }
             return;
         }
 
-        if (args.length > 1) {
+        // Команда без аргументов — только синтаксис.
+        if (args.length == 0) {
             message(player, deny ? "block-usage" : "allow-usage");
             return;
         }
 
-        if (args.length == 0) {
-            // Сюда попадает только /tpblock без ника — блок всех.
-            if (!updateRules(player, owner, null, deny)) return;
-            blockAll.add(owner);
-            exceptions.remove(owner);
-            message(player, "blocked-all");
+        if (args.length > 1) {
+            message(player, "block-usage");
             return;
         }
 
