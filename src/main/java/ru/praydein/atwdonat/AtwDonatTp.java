@@ -1,3 +1,4 @@
+
 package ru.praydein.atwdonat;
 
 import org.bukkit.Bukkit;
@@ -12,6 +13,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -34,6 +36,10 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
     private final Map<UUID, Set<UUID>> exceptions = new HashMap<>();
     private final Set<UUID> blockAll = new HashSet<>();
     private final Map<UUID, Long> lastTeleport = new HashMap<>();
+    // Кэш имён: ник в нижнем регистре -> UUID. Заполняется из базы
+    // при запуске и при каждом заходе игрока. Поиск — мгновенный,
+    // без переборов и обращений к диску.
+    private final Map<String, UUID> nameToUuid = new HashMap<>();
     private Connection database;
     private boolean teleportDisabled;
 
@@ -47,6 +53,7 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
                 statement.executeUpdate("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value INTEGER NOT NULL)");
                 statement.executeUpdate("CREATE TABLE IF NOT EXISTS block_all (owner TEXT PRIMARY KEY)");
                 statement.executeUpdate("CREATE TABLE IF NOT EXISTS player_rules (owner TEXT NOT NULL, visitor TEXT NOT NULL, allowed INTEGER NOT NULL, PRIMARY KEY (owner, visitor))");
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS player_names (uuid TEXT PRIMARY KEY, name TEXT NOT NULL)");
             }
             migrateLegacyData();
             loadState();
@@ -101,7 +108,7 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
                         for (String value : players.getStringList(key + "." + list)) {
                             try {
                                 String visitor = UUID.fromString(value).toString();
-                                // A denial takes precedence if legacy data contains both rules.
+                                // Запрет имеет приоритет, если в legacy-данных есть оба правила.
                                 execute("INSERT OR IGNORE INTO player_rules VALUES (?, ?, ?)", owner.toString(), visitor, list.equals("exceptions") ? 1 : 0);
                             } catch (IllegalArgumentException ex) {
                                 getLogger().warning("Некорректный UUID в data.yml: " + value);
@@ -133,6 +140,15 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
                 UUID visitor = UUID.fromString(result.getString(2));
                 Map<UUID, Set<UUID>> rules = result.getInt(3) == 0 ? blocked : exceptions;
                 rules.computeIfAbsent(owner, id -> new HashSet<UUID>()).add(visitor);
+            }
+        }
+        try (Statement statement = database.createStatement(); ResultSet result = statement.executeQuery("SELECT uuid, name FROM player_names")) {
+            while (result.next()) {
+                try {
+                    nameToUuid.put(result.getString(2).toLowerCase(Locale.ROOT), UUID.fromString(result.getString(1)));
+                } catch (IllegalArgumentException ex) {
+                    getLogger().warning("Некорректный UUID в базе имён: " + result.getString(1));
+                }
             }
         }
     }
@@ -171,7 +187,13 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
         sender.sendMessage(ChatColor.translateAlternateColorCodes('&', text));
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    /**
+     * Перехватываем /tp на LOWEST: наш обработчик срабатывает ПЕРЕД
+     * остальными плагинами и отменяет команду, так что чужие обработчики
+     * (warmup-телепорты и пр.) с отменённым событием уже не выполняются —
+     * именно они давали секундную задержку на несуществующих никах.
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         String input = event.getMessage().substring(1).trim();
         if (input.isEmpty()) return;
@@ -181,6 +203,18 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
         String[] args = new String[parts.length - 1];
         System.arraycopy(parts, 1, args, 0, args.length);
         teleport(event.getPlayer(), args, false);
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        String name = event.getPlayer().getName();
+        nameToUuid.put(name.toLowerCase(Locale.ROOT), id);
+        try {
+            execute("INSERT OR REPLACE INTO player_names VALUES (?, ?)", id.toString(), name);
+        } catch (SQLException ex) {
+            getLogger().warning("Не удалось сохранить имя игрока: " + ex.getMessage());
+        }
     }
 
     @Override
@@ -215,6 +249,11 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
         return true;
     }
 
+    /**
+     * Телепорт только к игрокам в сети: getPlayerExact — это поиск
+     * по внутренней карте Bukkit, выполняется мгновенно.
+     * Оффлайн или несуществующий ник — сразу «player-not-found».
+     */
     private void teleport(Player player, String[] args, boolean admin) {
         if (!player.hasPermission(admin ? "atwdon.admin.htp" : "atwdon.tp")) {
             message(player, "no-permission");
@@ -307,19 +346,13 @@ public final class AtwDonatTp extends JavaPlugin implements Listener {
             return;
         }
 
-        OfflinePlayer target = Bukkit.getPlayerExact(args[0]);
-        if (target == null) {
-            for (OfflinePlayer known : Bukkit.getOfflinePlayers()) {
-                if (known.getName() != null && known.getName().equalsIgnoreCase(args[0])) {
-                    target = known;
-                    break;
-                }
-            }
-        }
-        if (target == null) {
+        // Имя разрешаем по кэшу в памяти — без перебора getOfflinePlayers.
+        UUID cached = nameToUuid.get(args[0].toLowerCase(Locale.ROOT));
+        if (cached == null) {
             message(player, "player-not-found");
             return;
         }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(cached);
         UUID visitor = target.getUniqueId();
         if (owner.equals(visitor)) {
             message(player, "self-target");
